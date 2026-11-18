@@ -14,3 +14,8 @@
 # /deploy/                @votre-compte
 # compose*.yaml           @votre-compte
 # **/Dockerfile           @votre-compte
+# Sans binôme : tout le dépôt est relu par moi
+*                       @OphLhe
+/.github/               @OphLhe
+compose*.yaml           @OphLhe
+**/Dockerfile           @OphLhe
