@@ -128,3 +128,5 @@ DATABASE_URL=postgres://taskflow:taskflow@localhost:5432/taskflow npm run test:i
 - Titres de PR et messages de commit au format *Conventional Commits* : `feat:`, `fix:`, `ci:`, `build:`, `docs:`,
   `test:`, `chore:`.
 - Avant de pousser : `npm run lint && npm run format:check && npm test` dans le(s) dossier(s) modifié(s).
+
+Projet réalisé dans le cadre de la formation DEVOPS CDA.
