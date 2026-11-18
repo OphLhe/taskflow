@@ -4,9 +4,17 @@ on:
   pull_request:
   push:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
 
 permissions:
   contents: read
+
+# Un nouveau push sur une PR annule le run devenu inutile ; sur main, jamais
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # Seuil de couverture des lignes (défini une seule fois)
 env:
