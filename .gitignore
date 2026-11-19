@@ -24,3 +24,10 @@ backups/
 *.pem
 *.key
 *.crt
+
+# Déploiement : jamais dans Git
+certs/
+backups/
+*.pem
+*.key
+*.crt
