@@ -1,0 +1,78 @@
+stages:
+  - test
+
+# S'exécute sur les merge requests et sur la branche par défaut
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+default:
+  interruptible: true
+  timeout: 10m
+
+api:
+  stage: test
+  image: node:${NODE_VERSION}-alpine
+  parallel:
+    matrix:
+      - NODE_VERSION: ["20", "22"]
+  cache:
+    key:
+      files:
+        - api/package-lock.json
+    paths:
+      - api/.npm/
+  before_script:
+    - cd api
+    - npm ci --cache .npm --prefer-offline
+  script:
+    - npm run lint
+    - npm run format:check
+    - npm run test:coverage
+
+api-integration:
+  stage: test
+  image: node:20-alpine
+  services:
+    - name: postgres:16-alpine
+      alias: postgres
+  variables:
+    POSTGRES_USER: taskflow
+    POSTGRES_PASSWORD: taskflow
+    POSTGRES_DB: taskflow
+    DATABASE_URL: postgres://taskflow:taskflow@postgres:5432/taskflow
+  cache:
+    key:
+      files:
+        - api/package-lock.json
+    paths:
+      - api/.npm/
+  before_script:
+    - cd api
+    - npm ci --cache .npm --prefer-offline
+  script:
+    - npm run test:int
+
+front:
+  stage: test
+  image: node:20-alpine
+  cache:
+    key:
+      files:
+        - front/package-lock.json
+    paths:
+      - front/.npm/
+  before_script:
+    - cd front
+    - npm ci --cache .npm --prefer-offline
+  script:
+    - npm run lint
+    - npm run format:check
+    - npm run test:coverage
+    - npm run build
+  artifacts:
+    name: front-dist
+    paths:
+      - front/dist
+    expire_in: 7 days
