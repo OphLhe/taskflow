@@ -1,0 +1,79 @@
+pipeline {
+  agent none
+
+  options {
+    timeout(time: 10, unit: 'MINUTES')
+    // un nouveau build annule le précédent
+    disableConcurrentBuilds(abortPrevious: true)
+  }
+
+  environment {
+    // évite l'erreur EACCES: permission denied, mkdir '/.npm'
+    npm_config_cache = '/tmp/.npm'
+  }
+
+  stages {
+    stage('api') {
+      matrix {
+        axes {
+          axis {
+            name 'NODE_VERSION'
+            values '20', '22'
+          }
+        }
+        agent { docker { image "node:${NODE_VERSION}-alpine" } }
+        stages {
+          stage('Lint et tests unitaires') {
+            steps {
+              dir('api') {
+                sh 'npm ci'
+                sh 'npm run lint'
+                sh 'npm run format:check'
+                sh 'npm run test:coverage'
+              }
+            }
+          }
+        }
+      }
+    }
+
+    stage('api-integration') {
+      agent any
+      steps {
+        script {
+          def dbOptions = '-e POSTGRES_USER=taskflow -e POSTGRES_PASSWORD=taskflow -e POSTGRES_DB=taskflow'
+          docker.image('postgres:16-alpine').withRun(dbOptions) { db ->
+            // attendre que la base soit PRÊTE, pas seulement démarrée
+            sh "until docker exec ${db.id} pg_isready -U taskflow -d taskflow; do sleep 1; done"
+            docker.image('node:20-alpine').inside("--link ${db.id}:postgres") {
+              withEnv(['DATABASE_URL=postgres://taskflow:taskflow@postgres:5432/taskflow']) {
+                dir('api') {
+                  sh 'npm ci'
+                  sh 'npm run test:int'
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    stage('front') {
+      agent { docker { image 'node:20-alpine' } }
+      steps {
+        dir('front') {
+          sh 'npm ci'
+          sh 'npm run lint'
+          sh 'npm run format:check'
+          sh 'npm run test:coverage'
+          sh 'npm run build'
+        }
+      }
+      post {
+        success {
+          archiveArtifacts artifacts: 'front/dist/**', fingerprint: true
+        }
+      }
+    }
+  }
+}
